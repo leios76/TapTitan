@@ -1,0 +1,94 @@
+<div id="main-container" class="container">
+  <div class="row">
+    <div class="col-md-3">
+      <div class="row">
+        <div class="col-md-6">
+          <input type="text" class="form-control" id="seed" placeholder="Seed" value="6997">
+        </div>
+        
+        <div class="col-md-6">
+          <button id="btn-calc" class="btn btn-primary">Calc</button>
+        </div>
+      </div>
+      <div id="artifacts-list" class="row">
+      </div>
+    </div>
+    <div id="result" class="col-md-8">
+    </div>
+  </div>
+</div>
+
+<script>
+  for (var i = 0; i < artifacts.length; i++) {
+    html = '';
+    html += '<div id="artifact-' + i + '-row" class="row">';
+    html += '<div class="col-md-9">' + artifacts[i] + '</div>';
+    html += '<div class="col-md-3"><input type="checkbox" id="artifact-' + i + '-own"></div>';
+    html += '</div>';
+
+    $("#artifacts-list").append(html);
+  }
+
+  // Make test set
+  var ownedList = [4, 5, 11, 18, 24, 26];
+  for (var i = 0; i < ownedList.length; i++) {
+    $("#artifact-" + ownedList[i] + "-own").prop("checked", true);
+  }
+
+  var countArtifacts = function(limit) {
+    var count = 0;
+    if (limit === undefined) {
+      limit = artifacts.length;
+    }
+    if (limit < 0 || limit > artifacts.length) {
+      limit = artifacts.length;
+    }
+
+    for (var i = 0; i < limit; i++) {
+      if ($("#artifact-" + i + "-own").prop("checked")) {
+        count++;
+      }
+    }
+    return count;
+  };
+
+  var getNextArtifact = function(seed) {
+    if (seed === undefined || seed === "") {
+      return;
+    }
+    var target_index = random_table[seed][2 + countArtifacts()];
+    for (var i = 0; i < artifacts.length; i++) {
+      if ($("#artifact-" + i + "-own").prop("checked")) {
+        continue;
+      }
+      //console.log(artifacts[i] + ":" + countArtifacts(i));
+      //console.log(i - countArtifacts(i));
+      if (target_index === i - countArtifacts(i)) {
+        break;
+      }
+    }
+    if (i < artifacts.length) {
+      return {seed: random_table[seed][1], artifact: artifacts[i], id: i}
+    } else {
+      return {seed: random_table[seed][1], artifact: "unknown", id: -1}
+    }
+  }
+
+  $('body').on('click', '.close', function() {
+    console.log('closing');
+    console.log($(this).data("id"));
+    $("#artifact-" + next.id + "-own").prop("checked", false);
+  });
+
+  $("#btn-calc").click(function() {
+    next = getNextArtifact($("#seed").val());
+    if (next.id === -1) {
+      return;
+    }
+    $("#artifact-" + next.id + "-own").prop("checked", true);
+    $("#seed").val(next.seed);
+    $("#result").append('<div class="alert alert-success alert-dismissible" role="alert"><button type="button" class="close" data-dismiss="alert" data-id="' + next.id + '"aria-label="Close"><span aria-hidden="true">&times;</span></button>' + next.artifact + '</div>');
+  });
+</script>
+
+
