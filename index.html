@@ -37,6 +37,7 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
     <!--SCRIPTS-->
     <script src="js/artifacts.js"></script>
+    <script src="js/relics.js"></script>
     <script src="js/random.js"></script>
     <script src="js/settings.js"></script>
     <!--SCRIPTS END-->
@@ -53,7 +54,7 @@
       </div>
       <div class="row">
         <div class="col-md-6">
-          <input type="text" class="form-control" id="seed" placeholder="Seed" value="9678">
+          <input type="text" class="form-control" id="seed" placeholder="Seed">
         </div>
         
         <div class="col-md-6">
@@ -135,18 +136,18 @@
   for (var i = 0; i < artifacts.length; i++) {
     html = '';
     html += '<div id="artifact-' + i + '-row" class="row">';
-    html += '<div class="col-md-9">' + artifacts[i] + '</div>';
     html += '<div class="col-md-3"><input type="checkbox" id="artifact-' + i + '-own"></div>';
+    html += '<div class="col-md-9">' + i + '. ' + artifacts[i] + '</div>';
     html += '</div>';
 
     $("#artifacts-list").append(html);
   }
 
   // Make test set
-  var ownedList = [2, 3, 4, 5, 11, 16, 17, 18, 22, 24, 25, 26, 27];
   for (var i = 0; i < ownedList.length; i++) {
     $("#artifact-" + ownedList[i] + "-own").prop("checked", true);
   }
+  $('#seed').val(lastSeed);
   calculateRelicCosts();
 
 </script>
