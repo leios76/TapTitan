@@ -1,24 +1,27 @@
 <div id="main-container" class="container">
   <div class="row">
-    <div class="col-md-3">
+    <div class="col-xs-5 col-md-3">
       <div class="row">
-        <div id="relic-cost" class="col-md-12">
+        <div id="relic-cost" class="col-xs-12 col-md-12">
         Relic cost: 
         </div>
       </div>
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-xs-6 col-md-6">
           <input type="text" class="form-control" id="seed" placeholder="Seed" value="9678">
         </div>
         
-        <div class="col-md-6">
+        <div class="col-xs-3 col-md-3">
           <button id="btn-calc" class="btn btn-primary">Calc</button>
+        </div>
+        <div class="col-xs-3 col-md-3">
+          <button id="btn-path" class="btn btn-primary">Path</button>
         </div>
       </div>
       <div id="artifacts-list" class="row">
       </div>
     </div>
-    <div id="result" class="col-md-8">
+    <div id="result" class="col-xs-7 col-md-9">
     </div>
   </div>
 </div>
@@ -28,35 +31,45 @@
     $("#relic-cost").html("Relic cost: " + relic_costs[countArtifacts()]);
   }
 
-  var countArtifacts = function(limit) {
+  var countArtifacts = function(mask, limit) {
     var count = 0;
     if (limit === undefined) {
       limit = artifacts.length;
     }
+
+    if (mask === undefined) {
+      mask = [];
+      for (var i = 0; i < artifacts.length; i++) {
+        if ($("#artifact-" + i + "-own").prop("checked")) {
+          mask.push(1);
+        } else {
+          mask.push(0);
+        }
+      }
+    }
+
     if (limit < 0 || limit > artifacts.length) {
       limit = artifacts.length;
     }
 
     for (var i = 0; i < limit; i++) {
-      if ($("#artifact-" + i + "-own").prop("checked")) {
+      if (mask[i]) {
         count++;
       }
     }
     return count;
   };
 
-  var getNextArtifact = function(seed) {
+  var getNextArtifact = function(seed, mask, count) {
     if (seed === undefined || seed === "") {
       return;
     }
-    var target_index = random_table[seed][2 + countArtifacts()];
+    var target_index = random_table[seed][2 + count];
     for (var i = 0; i < artifacts.length; i++) {
-      if ($("#artifact-" + i + "-own").prop("checked")) {
+      if (mask[i]) {
         continue;
       }
-      //console.log(artifacts[i] + ":" + countArtifacts(i));
-      //console.log(i - countArtifacts(i));
-      if (target_index === i - countArtifacts(i)) {
+      if (target_index === i - countArtifacts(mask, i)) {
         break;
       }
     }
@@ -70,12 +83,21 @@
   $('body').on('click', '.close', function() {
     console.log('closing');
     console.log($(this).data("id"));
-    $("#artifact-" + next.id + "-own").prop("checked", false);
+    $("#artifact-" + $(this).data("id") + "-own").prop("checked", false);
     calculateRelicCosts();
   });
 
   $("#btn-calc").click(function() {
-    next = getNextArtifact($("#seed").val());
+    var mask = [];
+    for (var i = 0; i < artifacts.length; i++) {
+      if ($("#artifact-" + i + "-own").prop("checked")) {
+        mask.push(1);
+      } else {
+        mask.push(0);
+      }
+    }
+
+    next = getNextArtifact($("#seed").val(), mask, countArtifacts());
     if (next.id === -1) {
       return;
     }
@@ -85,23 +107,108 @@
     calculateRelicCosts();
   });
 
+  var checkArtifacts = function(mask) {
+    for (var i = 0; i < artifacts.length; i++) {
+      if (!$("#willhave-" + i).prop("checked")) {
+        continue;
+      }
+      if (mask[i] === 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  var simulate = function(seed, mask, count, history, max) {
+    var discards = [];
+
+    var found = 0;
+
+    for (var i = 0; i < artifacts.length; i++) {
+      if (mask[i] === 0) {
+        continue;
+      }
+      if ($("#musthave-" + i).prop("checked")) {
+        continue;
+      }
+      discards.push(i);
+    }
+
+    for (var i = -1; i < discards.length; i++) {
+      var localMask = mask.slice();
+      var localCount = count;
+      var localHistory = history.slice();
+      if (i > -1)
+      {
+        localMask[discards[i]] = 0;
+        localCount--;
+        localHistory.push("drop " + artifacts[discards[i]]);
+      }
+      next = getNextArtifact(seed, localMask, localCount);
+      localHistory.push("get " + artifacts[next.id]);
+      localMask[next.id] = 1;
+      localCount++;
+      //console.log(next);
+      if (checkArtifacts(localMask)) {
+        console.log('OK');
+        console.log(localHistory);
+        found++;
+      } else {
+        if (localHistory.length < max) {
+          found += simulate(next.seed, localMask, localCount, localHistory, max);
+        }
+      }
+    }
+
+    return found;
+  
+  }
+
+  $("#btn-path").click(function() {
+    for (var i = 0; i < 10; i++) {
+      var seed = $("#seed").val();
+      var mask = [];
+      var count = countArtifacts();
+      for (var j = 0; j < artifacts.length; j++) {
+        if ($("#artifact-" + j + "-own").prop("checked")) {
+          mask.push(1);
+        } else {
+          mask.push(0);
+        }
+      }
+
+      var found = simulate(seed, mask, count, [], i);
+      if (found > 0) {
+        break;
+      }
+    }
+    console.log('done: ' + found);
+  });
   
   
   for (var i = 0; i < artifacts.length; i++) {
     html = '';
     html += '<div id="artifact-' + i + '-row" class="row">';
-    html += '<div class="col-md-9">' + artifacts[i] + '</div>';
-    html += '<div class="col-md-3"><input type="checkbox" id="artifact-' + i + '-own"></div>';
+    html += '<div class="col-xs-1 col-md-1"><input type="checkbox" id="artifact-' + i + '-own" onchange="calculateRelicCosts()"></div>';
+    html += '<div class="col-xs-8 col-md-8">' + i + '. ' + artifacts[i] + '</div>';
+    html += '<div class="col-xs-1 col-md-1"><input type="checkbox" id="musthave-' + i + '"></div>';
+    html += '<div class="col-xs-1 col-md-1"><input type="checkbox" id="willhave-' + i + '"></div>';
     html += '</div>';
 
     $("#artifacts-list").append(html);
   }
 
   // Make test set
-  var ownedList = [2, 3, 4, 5, 11, 16, 17, 18, 22, 24, 25, 26, 27];
   for (var i = 0; i < ownedList.length; i++) {
     $("#artifact-" + ownedList[i] + "-own").prop("checked", true);
   }
+  for (var i = 0; i < mustHaveList.length; i++) {
+    $("#musthave-" + mustHaveList[i]).prop("checked", true);
+  }
+  for (var i = 0; i < willHaveList.length; i++) {
+    $("#willhave-" + willHaveList[i]).prop("checked", true);
+  }
+  $('#seed').val(lastSeed);
   calculateRelicCosts();
 
 </script>
